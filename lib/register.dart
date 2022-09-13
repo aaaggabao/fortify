@@ -155,7 +155,7 @@ class _RegisterState extends State<Register> {
               controller: _controller,
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25, ),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 25, ),
               decoration: const InputDecoration(
                 hintText: 'Phone number',
                 border: OutlineInputBorder(

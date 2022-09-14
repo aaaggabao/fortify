@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk.dart';
 
 import 'Article.dart';
@@ -16,6 +17,7 @@ class _HomePageState extends State<HomePage> {
   late Future<List<Article>> futureArticle;
   late Future<List<BlockedUrl>> futureBlockedUrl;
   late TextEditingController _controller;
+  int i = 0;
 
   Future<List<Article>> fetchArticles() async {
     final QueryBuilder<ParseObject> parseQuery =
@@ -64,6 +66,9 @@ class _HomePageState extends State<HomePage> {
     } else {
       print(parseResponse.error);
     }
+    setState(() {
+      futureBlockedUrl = fetchBlockedUrl();
+    });
   }
 
   Future<void> updateStatus(String value, String objectId) async {
@@ -71,10 +76,6 @@ class _HomePageState extends State<HomePage> {
       ..objectId = objectId
       ..set('Enabled', value);
     await blockedUrl.save();
-    setState() {
-      futureBlockedUrl =fetchBlockedUrl();
-    }
-    print(futureBlockedUrl);
   }
 
   @override
@@ -83,7 +84,6 @@ class _HomePageState extends State<HomePage> {
     _controller = TextEditingController();
     futureBlockedUrl = fetchBlockedUrl();
   }
-
 
   @override
   void dispose() {
@@ -94,6 +94,7 @@ class _HomePageState extends State<HomePage> {
    @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Row(
@@ -181,7 +182,7 @@ class _HomePageState extends State<HomePage> {
                                  },
                                 keyboardType: TextInputType.url,
                                 decoration: const InputDecoration(
-                                  hintText: 'www.addtoblock.com',
+                                  hintText: 'Enter sites to block',
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.all(
                                       Radius.circular(15.0),
@@ -220,96 +221,75 @@ class _HomePageState extends State<HomePage> {
                                 ),
                               ),
                             ),
-                            SingleChildScrollView(
-                                child: FutureBuilder<List<BlockedUrl>>(
-                                  future: futureBlockedUrl,
-                                  builder: (context, snapshot) {
-                                    if (snapshot.connectionState != ConnectionState.done) {
-                                      print("Data 1");
-                                      const Center(child: CircularProgressIndicator());
-                                    }
-                                    if (snapshot.hasError) {
-                                      print("Data 2");
-                                    }
-                                    if (snapshot.hasData) {
-                                      print("Data 3");
-                                      // return Column(
-                                      //   children:
-                                      //   List.generate(snapshot.data!.length,
-                                      //      (index) {
-                                      //      String x = snapshot.data![index].enabled.toString();
-                                      //        return Row(
-                                      //          children: [
-                                      //            Text(x, style: TextStyle(color: Colors.white),),
-                                      //            Transform.scale(
-                                      //                scale: 2.0,
-                                      //                child: Switch(
-                                      //                  value: snapshot.data?[index].enabled.toString()  == true.toString().toLowerCase(),
-                                      //                  onChanged: (value) async {
-                                      //                    print(value);
-                                      //                    var objectId = snapshot.data![index].objectId;
-                                      //                    updateStatus(value.toString(), objectId);
-                                      //                    print(futureBlockedUrl);
-                                      //                  },
-                                      //                  activeTrackColor: Colors.white,
-                                      //                  activeColor: Colors.yellow,
-                                      //                  inactiveTrackColor: Colors.white,
-                                      //                  inactiveThumbColor: Colors.grey,
-                                      //                )),
-                                      //          ],
-                                      //        );
-                                      //      }
-                                      //   ),
-                                      // );
-                                    }
-                                    return snapshot.connectionState == ConnectionState.waiting
-                                        ? const Center(child: CircularProgressIndicator())
-                                        : Column(
-                                      children: List.generate(snapshot.data!.length,
-                                            (index) {
-                                          return Row(
-                                            children: [
-                                              Padding(
-                                                padding: const EdgeInsets.only(
-                                                  left: 10,
-                                                  right: 10,
+                            Container(
+                              height: 350,
+                              child: SingleChildScrollView(
+                                  child: FutureBuilder<List<BlockedUrl>>(
+                                    future: futureBlockedUrl,
+                                    builder: (context, snapshot) {
+                                      if (snapshot.connectionState != ConnectionState.done) {
+                                        print("Data 1");
+                                        const Center(child: CircularProgressIndicator());
+                                      }
+                                      if (snapshot.hasError) {
+                                        print("Data 2");
+                                      }
+                                      if (snapshot.hasData) {
+                                        print("Data 3");
+
+                                      }
+                                      return snapshot.connectionState == ConnectionState.waiting
+                                          ? const Center(child: CircularProgressIndicator())
+                                          : Column(
+                                        children: List.generate(snapshot.data!.length,
+                                              (index) {
+                                            return Row(
+                                              children: [
+                                                Padding(
+                                                  padding: const EdgeInsets.only(
+                                                    left: 20,
+                                                    right: 20,
+                                                  ),
+                                                  child: Transform.scale(
+                                                      scale: 2.0,
+                                                      child: Switch(
+                                                        value: snapshot.data?[index].enabled.toString()  == true.toString().toLowerCase(),
+                                                        onChanged: (value) {
+                                                          print(value);
+                                                          var objectId = snapshot.data![index].objectId;
+                                                          updateStatus(value.toString(), objectId);
+                                                          SchedulerBinding.instance
+                                                              .addPostFrameCallback((_) => setState(() {
+                                                            futureBlockedUrl = fetchBlockedUrl();
+                                                          }));
+                                                        },
+                                                        activeTrackColor: Colors.white,
+                                                        activeColor: Colors.yellow,
+                                                        inactiveTrackColor: Colors.white,
+                                                        inactiveThumbColor: Colors.grey,
+                                                      )),
                                                 ),
-                                                child: Transform.scale(
-                                                    scale: 2.0,
-                                                    child: Switch(
-                                                      value: snapshot.data?[index].enabled.toString()  == true.toString().toLowerCase(),
-                                                      onChanged: (value) async {
-                                                        print(value);
-                                                        var objectId = snapshot.data![index].objectId;
-                                                        updateStatus(value.toString(), objectId);
-                                                        print(futureBlockedUrl);
-                                                      },
-                                                      activeTrackColor: Colors.white,
-                                                      activeColor: Colors.yellow,
-                                                      inactiveTrackColor: Colors.white,
-                                                      inactiveThumbColor: Colors.grey,
-                                                    )),
-                                              ),
-                                              Padding(
-                                                padding: const EdgeInsets.only(
-                                                  left: 10,
-                                                ),
-                                                child: Text(
-                                                  snapshot.data?[index].url ?? "null",
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 20,
+                                                Padding(
+                                                  padding: const EdgeInsets.only(
+                                                    left: 10,
+                                                  ),
+                                                  child: Text(
+                                                    snapshot.data?[index].url ?? "null",
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 20,
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      ),
-                                    );
-                                  },
+                                              ],
+                                            );
+                                          },
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
-                              ),
+                            ),
 
                           ],
                         ),

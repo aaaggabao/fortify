@@ -1,9 +1,14 @@
+import 'dart:developer';
+
+import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_accessibility_service/flutter_accessibility_service.dart';
 import 'package:flutter_sms/flutter_sms.dart';
 import 'package:fortify/register.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'blockurl.dart';
 import 'login.dart';
 
 void main() async {
@@ -15,8 +20,46 @@ void main() async {
   await Parse().initialize(keyApplicationId, keyParseServerUrl,
       clientKey: keyClientKey, autoSendSessionId: true);
 
+  final bool status = await FlutterAccessibilityService.isAccessibilityPermissionEnabled();
+  final bool status1 = await FlutterAccessibilityService.requestAccessibilityPermission();
+
+  List<String> urls = [];
+  final QueryBuilder<ParseObject> parseQuery =
+  QueryBuilder<ParseObject>(ParseObject('BlockedUrl'));
+  final ParseResponse apiResponse = await parseQuery.query();
+  List<BlockedUrl> listOfBlockeUrl = <BlockedUrl>[];
+  if (apiResponse.success && apiResponse.results != null) {
+    for (var object in apiResponse.results as List<ParseObject>) {
+      if (object.get<String>('Enabled').toString() == "true" && object.get<String>('URL').toString()!="") {
+        print(object.get<String>('URL').toString()
+            .replaceAll(".com", "")
+            .replaceAll("www.", ""));
+        urls.add(object.get<String>('URL').toString()
+            .replaceAll(".com", "")
+            .replaceAll("www.", ""));
+      }
+    }
+  }
+
+  FlutterAccessibilityService.accessStream.listen((event) {
+    for (var url in urls) {
+      if (event.nodesText.toString().contains(url)
+          && event.packageName.toString().contains("com.android.chrome")
+          && event.eventType.toString().contains("EventType.typeWindowContentChanged")) {
+          print("url");
+
+        final intent = AndroidIntent(
+            action: 'action_view',
+            data: Uri.encodeFull('https://www.sitesrestricted.com'),
+            package: 'com.android.chrome');
+        intent.launch();
+      }
+    }
+  });
+
   runApp(const MyApp());
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
